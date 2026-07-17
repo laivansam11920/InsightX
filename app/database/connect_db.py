@@ -9,8 +9,10 @@ from config.settings import Config
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
 try:
-    client: MongoClient[Mapping[str, Any]] = MongoClient(Config.uri, timeoutMS=5000, serverSelectionTimeoutMS=5000)
-    client.admin.command('ping')
+    client: MongoClient[Mapping[str, Any]] = MongoClient(
+        Config.uri, timeoutMS=5000, serverSelectionTimeoutMS=5000
+    )
+    client.admin.command("ping")
     db = client[str(Config.DB_NAME)]
     print("Successfully connected to MongoDB")
 except ServerSelectionTimeoutError:
