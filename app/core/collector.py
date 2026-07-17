@@ -8,7 +8,7 @@ from app.database.connect_db import db
 from config.settings import Config
 from requests import post
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 from time import time
 import functools
@@ -27,7 +27,7 @@ def do_thoi_gian(func):
     return wrapper
 
 
-def fetch_time_pushes_graphql(token: str, username: str) -> Dict[str, int]:
+def fetch_time_pushes_graphql(token: str, username: str) -> tuple[dict[str, Any], int]:
     try:
         url = "https://api.github.com/graphql"
         headers = {"Authorization": f"Bearer {token}"}
@@ -53,22 +53,24 @@ def fetch_time_pushes_graphql(token: str, username: str) -> Dict[str, int]:
 
         if "data" not in data or "user" not in data["data"]:
             print("Error from GitHub:", data, flush=True)
-            return {}
+            return {}, 0
 
         monthly_stats = defaultdict(int)
         weeks = data["data"]["user"]["contributionsCollection"]["contributionCalendar"][
             "weeks"
         ]
-
+        pushes_data: int = 0
         for week in weeks:
             for day in week["contributionDays"]:
                 # The date format is 'YYYY-MM-DD', so we take the first 7 characters to get 'YYYY-MM'
                 month_key = day["date"][:7]
                 monthly_stats[month_key] += day["contributionCount"]
-        return dict(monthly_stats)
+                pushes_data += int(day["contributionCount"])
+
+        return dict(monthly_stats), pushes_data
     except Exception as e:
         print(f"{e}", flush=True)
-        return {}
+        return {}, 0
 
 
 def lay_thong_tin_mot_repo(repo):
@@ -86,17 +88,17 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
     try:
         user = gh.get_user(Config.name_gh)
         repos = list(user.get_repos())
-        print(repos)
+
         stats: Dict[str, int | Dict[str, int]] = {
             "Starred_Repos": int(user.get_starred().totalCount),
-            "Stars_Earned": 0,
+            "Stars_Earned": 0,  #
             "Contributed_to": 0,
-            "Project_Earned": len(repos),
-            "Pull_Requests": 0,
+            "Project_Earned": len(repos),  #
+            "Pull_Requests": 0,  #
             "PR_Code_Changes": 0,
-            "Issues": 0,
-            "pushes": 0,
-            "Time_Pushes": {},
+            "Issues": 0,  #
+            "pushes": 0,  #
+            "Time_Pushes": {},  #
             "Issues_Comments": 0,
             "reviews": 0,
             "reviews_comments": 0,
@@ -116,7 +118,12 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
                 stats["Stars_Earned"] += stars
                 stats["Pull_Requests"] += pulls
                 stats["Issues"] += issues
-            stats["Time_Pushes"] = future_pushes.result()
+            time_push, push_count = future_pushes.result()
+            stats["Time_Pushes"] = time_push
+            stats["pushes"] = push_count
         return stats
     except Exception as e:
         print(f"{e}", flush=True)
+
+
+print(get_github_stats())
