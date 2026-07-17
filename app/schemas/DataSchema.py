@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Dict
 
+
 class DataSchema(BaseModel):
     Starred_Repos: int = Field(..., ge=0)
     Stars_Earned: int = Field(..., ge=0)
@@ -15,4 +16,5 @@ class DataSchema(BaseModel):
     Issues_Comments: int = Field(..., ge=0)
     reviews: int = Field(..., ge=0)
     reviews_comments: int = Field(..., ge=0)
+    Code_Reviews: int = Field(..., ge=0)
     created_at: datetime = Field(default_factory=datetime.now)
