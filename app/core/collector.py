@@ -9,14 +9,16 @@ Description: Customizable GitHub repository analytics engine with high-precision
 
 from app.utils.github_client import gh
 from app.database.connect_db import db
-from config.settings import Config
+from config import Config
 from requests import post
 from collections import defaultdict
 from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 
 
-def fetch_time_pushes_graphql(token: str, /, username: str) -> tuple[dict[str, Any], int]:
+def fetch_time_pushes_graphql(
+    token: str, /, username: str
+) -> tuple[dict[str, Any], int]:
     try:
         url = "https://api.github.com/graphql"
         headers = {"Authorization": f"Bearer {token}"}
@@ -57,6 +59,9 @@ def fetch_time_pushes_graphql(token: str, /, username: str) -> tuple[dict[str, A
                 pushes_data += int(day["contributionCount"])
 
         return dict(monthly_stats), pushes_data
+    except TimeoutError:
+        print("Time out to connect Github", flush=True)
+        return {}, 0
     except Exception as e:
         print(f"An unexpected error occurred: {e}", flush=True)
         return {}, 0
@@ -116,4 +121,3 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
         return stats
     except Exception as e:
         print(f"An unexpected error occurred: {e}", flush=True)
-

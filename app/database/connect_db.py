@@ -5,7 +5,7 @@ Copyright: LaiVansam
 
 from typing import Any, Mapping
 from pymongo import MongoClient
-from config.settings import Config
+from config import Config
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
 try:

@@ -7,22 +7,19 @@ License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
 
-from dotenv import find_dotenv, load_dotenv
-from os import getenv
 import sys
-
-load_dotenv(find_dotenv(), override=True)
+from os import getenv
 
 
 class Config:
     # Database setting
-    DB_NAME: str = str(getenv("DB_NAME", "TEST"))
-    DB_COLLECTION: str = str(getenv("DB_COLLECTION", "TEST_DB"))
-    uri: str = str(getenv("MONGO_URI"))
+    DB_NAME: str = getenv("DB_NAME", "TEST")
+    DB_COLLECTION: str = getenv("DB_COLLECTION", "TEST_DB")
+    uri: str = getenv("MONGO_URI")
 
     # GitHub setting
-    token: str = str(getenv("GITHUB_TOKEN"))
-    name_gh: str = str(getenv("NAME_GITHUB"))
+    token: str = getenv("GITHUB_TOKEN")
+    name_gh: str = getenv("NAME_GITHUB")
 
     # Flask setting
     PORT: int = int(getenv("PORT", 2011))

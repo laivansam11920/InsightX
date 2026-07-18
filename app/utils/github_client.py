@@ -7,7 +7,7 @@ License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
 
-from config.settings import Config
+from config import Config
 from github import Auth, Github, GithubException, RateLimitExceededException
 
 
