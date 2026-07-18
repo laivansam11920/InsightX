@@ -10,21 +10,6 @@ from requests import post
 from collections import defaultdict
 from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
-from time import time
-import functools
-
-
-def do_thoi_gian(func):
-    @functools.wraps(func)  # Dòng này giữ lại tên và thông tin của hàm gốc
-    def wrapper(*args, **kwargs):
-        bat_dau = time()
-        ket_qua = func(*args, **kwargs)
-
-        ket_thuc = time()
-        print(f"Hàm '{func.__name__}' chạy mất: {ket_thuc - bat_dau:.4f} giây")
-        return ket_qua
-
-    return wrapper
 
 
 def fetch_time_pushes_graphql(token: str, username: str) -> tuple[dict[str, Any], int]:
@@ -69,19 +54,21 @@ def fetch_time_pushes_graphql(token: str, username: str) -> tuple[dict[str, Any]
 
         return dict(monthly_stats), pushes_data
     except Exception as e:
-        print(f"{e}", flush=True)
+        print(f"An unexpected error occurred: {e}", flush=True)
         return {}, 0
 
 
-def lay_thong_tin_mot_repo(repo):
+def gets_info_repo(repo):
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
-        return 0, 0, 0
+        return 0, 0, 0, 0
 
     stars = repo.stargazers_count
     pulls = repo.get_pulls(state="all").totalCount
     issues = repo.get_issues(state="all").totalCount
-    return stars, pulls, issues
+    repo_fork = 1 if repo.fork else 0
+
+    return stars, pulls, issues, repo_fork
 
 
 def get_github_stats() -> dict[str, int | dict[str, int]] | None:
@@ -90,7 +77,7 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
         repos = list(user.get_repos())
 
         stats: Dict[str, int | Dict[str, int]] = {
-            "Starred_Repos": int(user.get_starred().totalCount),
+            "Starred_Repos": int(user.get_starred().totalCount),  #
             "Stars_Earned": 0,  #
             "Contributed_to": 0,
             "Project_Earned": len(repos),  #
@@ -110,20 +97,19 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
                 fetch_time_pushes_graphql, Config.token, Config.name_gh
             )
             future_repos = {
-                executor.submit(lay_thong_tin_mot_repo, repo): repo for repo in repos
+                executor.submit(gets_info_repo, repo): repo for repo in repos
             }
 
             for future in future_repos:
-                stars, pulls, issues = future.result()
+                stars, pulls, issues, repo_fork = future.result()
                 stats["Stars_Earned"] += stars
                 stats["Pull_Requests"] += pulls
                 stats["Issues"] += issues
+                stats["Contributed_to"] += repo_fork
             time_push, push_count = future_pushes.result()
             stats["Time_Pushes"] = time_push
             stats["pushes"] = push_count
         return stats
     except Exception as e:
-        print(f"{e}", flush=True)
+        print(f"An unexpected error occurred: {e}", flush=True)
 
-
-print(get_github_stats())
