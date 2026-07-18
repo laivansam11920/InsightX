@@ -1,6 +1,10 @@
 """
-Author: LaiVanSam
-Copyright: LaiVansam
+Project: InsightX
+Author: Lại Văn Sâm
+Email: samvasang1192011@gmail.com
+Date: July 2026
+License: MIT
+Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
 
 from dotenv import find_dotenv, load_dotenv
@@ -16,7 +20,7 @@ class Config:
     DB_COLLECTION: str = str(getenv("DB_COLLECTION", "TEST_DB"))
     uri: str = str(getenv("MONGO_URI"))
 
-    # Github setting
+    # GitHub setting
     token: str = str(getenv("GITHUB_TOKEN"))
     name_gh: str = str(getenv("NAME_GITHUB"))
 
