@@ -24,6 +24,6 @@ class Settings(BaseSettings):
     PORT: int = Field(default=2011, alias="PORT")
     DEBUG: str = Field(default=False, alias="DEBUG")
     TEST: bool = Field(default=False, alias="TEST")
-    model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
+    model_config = SettingsConfigDict(populate_by_name=True)
 
 Config = Settings()
