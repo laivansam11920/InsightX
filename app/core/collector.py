@@ -7,14 +7,17 @@ License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
 
-from app.utils.github_client import gh
+from app.utils.github_client import get_client
 from app.database.connect_db import db
 from config import Config
 from requests import post
 from collections import defaultdict
 from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
+from utils.logger import logger
 
+#TODO: Improve error handling by using specific exceptions instead of generic ones.
 
 def fetch_time_pushes_graphql(
     token: str, /, username: str
@@ -60,13 +63,13 @@ def fetch_time_pushes_graphql(
 
         return dict(monthly_stats), pushes_data
     except TimeoutError:
-        print("Time out to connect Github", flush=True)
+        logger.error("Time out to connect Github")
         return {}, 0
     except Exception as e:
-        print(f"An unexpected error occurred: {e}", flush=True)
+        logger.error(f"An unexpected error occurred: {e}")
         return {}, 0
 
-
+#OPTIMIZE: Need to replace this function with a direct request query to improve performance.
 def gets_info_repo(repo):
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
@@ -79,12 +82,12 @@ def gets_info_repo(repo):
 
     return stars, pulls, issues, repo_fork
 
-
 def get_github_stats() -> dict[str, int | dict[str, int]] | None:
     try:
-        user = gh.get_user(Config.name_gh)
+        gh = get_client()
+        user = gh.get_user(Config.NAME_GITHUB)
         repos = list(user.get_repos())
-
+        #TODO: Proceed with developing the retrieval of remaining data for the schema.
         stats: Dict[str, int | Dict[str, int]] = {
             "Starred_Repos": int(user.get_starred().totalCount),  #
             "Stars_Earned": 0,  #
@@ -103,13 +106,14 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
         with ThreadPoolExecutor(max_workers=10) as executor:
 
             future_pushes: Any = executor.submit(
-                fetch_time_pushes_graphql, Config.token, Config.name_gh
+                fetch_time_pushes_graphql, Config.TOKEN, Config.NAME_GITHUB
             )
             future_repos = {
                 executor.submit(gets_info_repo, repo): repo for repo in repos
             }
 
-            for future in future_repos:
+            for future in as_completed(future_repos):
+                #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
                 stars, pulls, issues, repo_fork = future.result()
                 stats["Stars_Earned"] += stars
                 stats["Pull_Requests"] += pulls
@@ -119,5 +123,9 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
             stats["Time_Pushes"] = time_push
             stats["pushes"] = push_count
         return stats
+    except KeyError:
+        #FIXME: Handling KeyError without addressing the root cause; may result in data inconsistencies.
+        logger.error(f"KeyError occurred")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}", flush=True)
+        logger.error(f"An unexpected error occurred: {e}")
+#print(get_github_stats())

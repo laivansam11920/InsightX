@@ -25,7 +25,7 @@ def get_github_client() -> Github | None:
     except Exception as e:
         logger.error(f"An error occurred: {e}.", flush=True)
 
-_client = None
+_client: Github | None = None
 
 def get_client():
     global _client
