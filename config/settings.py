@@ -7,27 +7,23 @@ License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
 
-import sys
-from os import getenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
-
-class Config:
+class Settings(BaseSettings):
     # Database setting
-    DB_NAME: str = getenv("DB_NAME", "TEST")
-    DB_COLLECTION: str = getenv("DB_COLLECTION", "TEST_DB")
-    uri: str = getenv("MONGO_URI")
+    DB_NAME: str = Field(default="TEST", alias="DB_NAME")
+    DB_COLLECTION: str = Field(default="TEST_DB", alias="DB_COLLECTION")
+    URI: str = Field(alias="MONGO_URI")
 
     # GitHub setting
-    token: str = getenv("GITHUB_TOKEN")
-    name_gh: str = getenv("NAME_GITHUB")
+    TOKEN: str = Field(alias="GITHUB_TOKEN")
+    NAME_GITHUB: str = Field(alias="NAME_GITHUB")
 
     # Flask setting
-    PORT: int = int(getenv("PORT", 2011))
-    allow_population_by_field_name = True
+    PORT: int = Field(default=2011, alias="PORT")
+    DEBUG: str = Field(default=False, alias="DEBUG")
+    TEST: bool = Field(default=False, alias="TEST")
+    model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
 
-    if not uri or not token or not name_gh:
-        print(
-            "Error: MONGO_URI or GITHUB_TOKEN or NAME_GITHUB not found in .env file!",
-            flush=True,
-        )
-        sys.exit(1)
+Config = Settings()
