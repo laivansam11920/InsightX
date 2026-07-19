@@ -9,21 +9,26 @@ Description: Customizable GitHub repository analytics engine with high-precision
 
 from config import Config
 from github import Auth, Github, GithubException, RateLimitExceededException
-
+from utils.logger import logger
 
 def get_github_client() -> Github | None:
     try:
-        tk: str = Config.token
+        tk: str = Config.TOKEN
         if not tk:
             raise ValueError("GITHUB_TOKEN not found in .env file!")
         auth = Auth.Token(tk)
         return Github(auth=auth, timeout=50)
     except RateLimitExceededException:
-        print("You have exceeded the API rate limit!", flush=True)
+        logger.error("You have exceeded the API rate limit!")
     except GithubException as e:
-        print(f"An error occurred: {e.status}, {e.data}.", flush=True)
+        logger.error(f"An error occurred: {e.status}, {e.data}.", flush=True)
     except Exception as e:
-        print(f"An error occurred: {e}.", flush=True)
+        logger.error(f"An error occurred: {e}.", flush=True)
 
+_client = None
 
-gh = get_github_client()
+def get_client():
+    global _client
+    if _client is None:
+        _client = get_github_client()
+    return _client
