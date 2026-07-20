@@ -73,14 +73,17 @@ def fetch_time_pushes_graphql(
 def gets_info_repo(repo):
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0
 
     stars = repo.stargazers_count
     pulls = repo.get_pulls(state="all").totalCount
-    issues = repo.get_issues(state="all").totalCount
     repo_fork = 1 if repo.fork else 0
 
-    return stars, pulls, issues, repo_fork
+    issues = repo.get_issues(state="all")
+    issues_count = issues.totalCount
+    issues_comments = sum(issue.comments for issue in issues)
+
+    return stars, pulls, issues_count, issues_comments, repo_fork
 
 def get_github_stats() -> dict[str, int | dict[str, int]] | None:
     try:
@@ -91,19 +94,19 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
         stats: Dict[str, int | Dict[str, int]] = {
             "Starred_Repos": int(user.get_starred().totalCount),  #
             "Stars_Earned": 0,  #
-            "Contributed_to": 0,
+            "Contributed_to": 0, #
             "Project_Earned": len(repos),  #
             "Pull_Requests": 0,  #
             "PR_Code_Changes": 0,
             "Issues": 0,  #
             "pushes": 0,  #
             "Time_Pushes": {},  #
-            "Issues_Comments": 0,
+            "Issues_Comments": 0, #
             "reviews": 0,
             "reviews_comments": 0,
             "Code_Reviews": 0,
         }
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=20) as executor:
 
             future_pushes: Any = executor.submit(
                 fetch_time_pushes_graphql, Config.TOKEN, Config.NAME_GITHUB
@@ -114,11 +117,13 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
 
             for future in as_completed(future_repos):
                 #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
-                stars, pulls, issues, repo_fork = future.result()
+                stars, pulls, issues_count, issues_comments, repo_fork = future.result()
                 stats["Stars_Earned"] += stars
                 stats["Pull_Requests"] += pulls
-                stats["Issues"] += issues
+                stats["Issues"] += issues_count
+                stats["Issues_Comments"] += issues_comments
                 stats["Contributed_to"] += repo_fork
+
             time_push, push_count = future_pushes.result()
             stats["Time_Pushes"] = time_push
             stats["pushes"] = push_count
@@ -128,4 +133,4 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
         logger.error(f"KeyError occurred")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-#print(get_github_stats())
+print(get_github_stats())
