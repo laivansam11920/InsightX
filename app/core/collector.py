@@ -84,15 +84,15 @@ def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int]:
     if repo.size == 0:
         return *(0,) * 6,
 
-    stars = repo.stargazers_count
-    pulls = repo.get_pulls(state="all").totalCount
+    stars: int = repo.stargazers_count
+    pulls: int = repo.get_pulls(state="all").totalCount
     repo_fork = 1 if repo.fork else 0
 
-    issues = repo.get_issues(state="all")
-    issues_count = issues.totalCount
-    issues_comments = sum(issue.comments for issue in issues)
+    issues: Any = repo.get_issues(state="all")
+    issues_count: int = issues.totalCount
+    issues_comments: int = sum(issue.comments for issue in issues)
 
-    sum_reviews = get_reviews(repo)
+    sum_reviews: int = get_reviews(repo)
 
     return stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews
 
