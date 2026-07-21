@@ -20,6 +20,19 @@ from github.Repository import Repository
 
 #TODO: Improve error handling by using specific exceptions instead of generic ones.
 
+
+def get_reviews(repo, /) -> int:
+    try:
+        _C: int = 0
+
+        pulls = repo.get_pulls(state="all")
+        for pr in pulls:
+            _C += len(list(pr.get_reviews()))
+        return _C
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+        return 0
+
 def fetch_time_pushes_graphql(
     token: str, /, username: str
 ) -> tuple[dict[str, Any], int]:
@@ -74,10 +87,10 @@ def fetch_time_pushes_graphql(
         return {}, 0
 
 #OPTIMIZE: Need to replace this function with a direct request query to improve performance
-def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int]:
+def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int]:
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
-        return *(0,) * 5,
+        return *(0,) * 6,
 
     stars = repo.stargazers_count
     pulls = repo.get_pulls(state="all").totalCount
@@ -87,7 +100,9 @@ def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int]:
     issues_count = issues.totalCount
     issues_comments = sum(issue.comments for issue in issues)
 
-    return stars, pulls, issues_count, issues_comments, repo_fork
+    sum_reviews = get_reviews(repo)
+
+    return stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews
 
 def get_github_stats() -> dict[str, int | dict[str, int]] | None:
     try:
@@ -123,7 +138,7 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
 
             for future in as_completed(future_repos):
                 #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
-                stars, pulls, issues_count, issues_comments, repo_fork = future.result()
+                stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews = future.result()
 
                 # OPTIMIZE: We can optimize adding individual variables into a single block and use for k, v to merge the data.
                 stats["Stars_Earned"] += stars
@@ -131,6 +146,8 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
                 stats["Issues"] += issues_count
                 stats["Issues_Comments"] += issues_comments
                 stats["Contributed_to"] += repo_fork
+                stats["reviews"] += sum_reviews
+                stats["Code_Reviews"] += sum_reviews
 
             time_push, push_count = future_pushes.result()
             stats["Time_Pushes"] = time_push
