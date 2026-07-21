@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DB_NAME: str = Field(default="TEST", alias="DB_NAME")
     DB_COLLECTION: str = Field(default="TEST_DB", alias="DB_COLLECTION")
     URI: str = Field(alias="MONGO_URI")
+    GITHUB_GRAPHQL_URL: str = "https://api.github.com/graphql"
 
     # GitHub setting
     TOKEN: str = Field(alias="GITHUB_TOKEN")
@@ -22,7 +23,7 @@ class Settings(BaseSettings):
 
     # Flask setting
     PORT: int = Field(default=2011, alias="PORT")
-    DEBUG: str = Field(default=False, alias="DEBUG")
+    DEBUG: bool = Field(default=False, alias="DEBUG")
     TEST: bool = Field(default=False, alias="TEST")
     model_config = SettingsConfigDict(populate_by_name=True)
 
