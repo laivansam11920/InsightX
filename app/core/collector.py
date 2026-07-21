@@ -73,7 +73,7 @@ def fetch_time_pushes_graphql(
         logger.error(f"An unexpected error occurred: {e}")
         return {}, 0
 
-#OPTIMIZE: Need to replace this function with a direct request query to improve performance.
+#OPTIMIZE: Need to replace this function with a direct request query to improve performance
 def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int]:
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
