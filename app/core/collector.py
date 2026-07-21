@@ -12,11 +12,14 @@ from app.database.connect_db import db
 from config import Config
 from requests import post
 from collections import defaultdict
-from typing import Dict, Any, Literal
+from typing import Dict, Any
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from utils.logger import logger
 from github.Repository import Repository
+from utils.queries import CONTRIBUTION_CALENDAR_QUERY
+from schemas.DataSchema import DataSchema
+
 
 #TODO: Improve error handling by using specific exceptions instead of generic ones.
 
@@ -41,33 +44,22 @@ def fetch_time_pushes_graphql(
     monthly_stats = defaultdict(int)
 
     try:
-        url = "https://api.github.com/graphql"
-        headers = {"Authorization": f"Bearer {token}"}
-        query = """
-        {
-          user(login: "%s") {
-            contributionsCollection {
-              contributionCalendar {
-                weeks {
-                  contributionDays {
-                    date
-                    contributionCount
-                  }
-                }
-              }
-            }
-          }
-        }
-        """ % username
+        url: str = Config.GITHUB_GRAPHQL_URL
+        headers: dict[str, str] = {"Authorization": f"Bearer {token}"}
 
-        response = post(url, json={"query": query}, headers=headers, timeout=50)
+        json_data: dict[str, str] = {
+            'query': CONTRIBUTION_CALENDAR_QUERY % username,
+        }
+
+        response = post(url, json=json_data, headers=headers, timeout=50)
         data = response.json()
 
         if "data" not in data or "user" not in data["data"]:
             print("Error from GitHub:", data, flush=True)
             return {}, 0
 
-        weeks = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
+        weeks: list = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
+
         for week in weeks:
             for day in week["contributionDays"]:
                 # The date format is 'YYYY-MM-DD', so we take the first 7 characters to get 'YYYY-MM'
@@ -104,7 +96,7 @@ def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int]:
 
     return stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews
 
-def get_github_stats() -> dict[str, int | dict[str, int]] | None:
+def get_github_stats() -> DataSchema | None:
     try:
         gh = get_client()
         user = gh.get_user(Config.NAME_GITHUB)
@@ -122,9 +114,9 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
             "pushes": 0,  #
             "Time_Pushes": {},  #
             "Issues_Comments": 0, #
-            "reviews": 0,
-            "reviews_comments": 0,
-            "Code_Reviews": 0,
+            "reviews": 0, #
+            "reviews_comments": 0, #
+            "Code_Reviews": 0, #
         }
 
         with ThreadPoolExecutor(max_workers=10) as executor:
@@ -140,20 +132,26 @@ def get_github_stats() -> dict[str, int | dict[str, int]] | None:
                 #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
                 stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews = future.result()
 
-                # OPTIMIZE: We can optimize adding individual variables into a single block and use for k, v to merge the data.
-                stats["Stars_Earned"] += stars
-                stats["Pull_Requests"] += pulls
-                stats["Issues"] += issues_count
-                stats["Issues_Comments"] += issues_comments
-                stats["Contributed_to"] += repo_fork
-                stats["reviews"] += sum_reviews
-                stats["Code_Reviews"] += sum_reviews
+                keys_mapping: list[tuple[str, int]] = [
+                    ("Stars_Earned", stars),
+                    ("Pull_Requests", pulls),
+                    ("Issues", issues_count),
+                    ("Issues_Comments", issues_comments),
+                    ("Contributed_to", repo_fork),
+                    ("reviews", sum_reviews),
+                    ("reviews_comments", sum_reviews),
+                    ("Code_Reviews", sum_reviews)
+                ]
+
+                for k, v in keys_mapping:
+                    if k in stats:
+                        stats[k] += v
 
             time_push, push_count = future_pushes.result()
             stats["Time_Pushes"] = time_push
             stats["pushes"] = push_count
 
-        return stats
+        return DataSchema(**stats)
 
     except KeyError:
         #FIXME: Handling KeyError without addressing the root cause; may result in data inconsistencies.
