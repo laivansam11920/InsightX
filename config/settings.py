@@ -12,8 +12,8 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # Database setting
-    DB_NAME: str = Field(default="TEST", alias="DB_NAME")
-    DB_COLLECTION: str = Field(default="TEST_DB", alias="DB_COLLECTION")
+    DB_NAME: str = Field(default="InsightX", alias="DB_NAME")
+    DB_COLLECTION: str = Field(default="EXAMPLE_DB", alias="DB_COLLECTION")
     URI: str = Field(alias="MONGO_URI")
     GITHUB_GRAPHQL_URL: str = "https://api.github.com/graphql"
 

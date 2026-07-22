@@ -1,9 +1,11 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Dict
+from config import Config
 
 
 class DataSchema(BaseModel):
+    User: str = Config.NAME_GITHUB
     Starred_Repos: int = Field(..., ge=0)
     Stars_Earned: int = Field(..., ge=0)
     Contributed_to: int = Field(..., ge=0)

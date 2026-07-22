@@ -6,8 +6,6 @@ Date: July 2026
 License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
-from github import Github
-
 from app.utils.github_client import get_client
 from app.database.connect_db import db
 from config import Config
@@ -20,16 +18,21 @@ from utils.logger import logger
 from github.Repository import Repository
 from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 from schemas.DataSchema import DataSchema
+from abc import ABC
 
 
 #TODO: Improve error handling by using specific exceptions instead of generic ones.
 
-class GitHubStatsCollector:
+class BaseGitHubCollector(ABC):
     def __init__(self):
         self.token = Config.TOKEN
         self.username = Config.NAME_GITHUB
         self.github_client = get_client()
         self.url = Config.GITHUB_GRAPHQL_URL
+
+class GitHubStatsCollector(BaseGitHubCollector):
+    def __init__(self):
+        super().__init__()
 
     @staticmethod
     def _get_reviews(repo: Repository, /) -> int:
@@ -177,5 +180,20 @@ class GitHubStatsCollector:
         except KeyError:
             #FIXME: Handling KeyError without addressing the root cause; may result in data inconsistencies.
             logger.error(f"KeyError occurred")
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+
+    def update_db(self):
+        try:
+            collection_db = db[f"{Config.DB_COLLECTION}"]
+
+            data = self.get_github_stats()
+
+            if data is not None:
+                data_dict = data.model_dump()
+                result = collection_db.replace_one({"User": self.username}, data_dict, upsert=True)
+                logger.info(f"success to save id {result.upserted_id}")
+            else:
+                logger.error("data is None")
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
