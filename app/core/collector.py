@@ -16,6 +16,8 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from utils.logger import logger
 from github.Repository import Repository
+from requests.exceptions import RequestException
+from github import GithubException, RateLimitExceededException
 from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 from schemas.DataSchema import DataSchema
 from abc import ABC
@@ -63,15 +65,16 @@ class GraphQLStatsCollector(BaseGitHubCollector):
 
             return dict(monthly_stats), pushes_data
 
-        except KeyError:
-            logger.error(f"KeyError occurred")
+        except (KeyError, TypeError) as e:
+            logger.error(f"Data parsing error due to unexpected structure: {e}")
             return {}, 0
-        except TimeoutError:
-            logger.error("Time out to connect Github")
+        except RequestException as e:
+            logger.error(f"Network request failed: {e}")
             return {}, 0
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
             return {}, 0
+
 
 
 class RestStatsCollector(BaseGitHubCollector):
@@ -86,6 +89,12 @@ class RestStatsCollector(BaseGitHubCollector):
             pulls = repo.get_pulls(state="all")
             for pr in pulls:
                 reviews_count += len(list(pr.get_reviews()))
+            return reviews_count
+        except RateLimitExceededException:
+            logger.error("GitHub API rate limit exceeded while fetching reviews.")
+            return reviews_count
+        except GithubException as e:
+            logger.error(f"GitHub API error [{e.status}]: {e.data}")
             return reviews_count
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
@@ -109,14 +118,20 @@ class RestStatsCollector(BaseGitHubCollector):
                 for file in files_changes:
                     _add += file.additions
                     _delete += file.deletions
-            except Exception as e:
-                logger.error(f"An unexpected error occurred: {e}")
+            except GithubException as e:
+                logger.error(f"GitHub error while fetching PR files: {e.data}")
+            except AttributeError as e:
+                logger.error(f"Attribute error while processing file changes: {e}")
 
         repo_fork = 1 if repo.fork else 0
 
-        issues: Any = repo.get_issues(state="all")
-        issues_count: int = issues.totalCount
-        issues_comments: int = sum(issue.comments for issue in issues)
+        try:
+            issues: Any = repo.get_issues(state="all")
+            issues_count: int = issues.totalCount
+            issues_comments: int = sum(issue.comments for issue in issues)
+        except GithubException as e:
+            logger.error(f"Failed to fetch issues for repo {repo.name}: {e.data}")
+            issues_count, issues_comments = 0, 0
 
         sum_reviews: int = self._get_reviews(repo)
 
@@ -189,11 +204,12 @@ class GitHubStatsCollector(BaseGitHubCollector):
 
             return DataSchema(**stats)
 
-        except KeyError:
-            #FIXME: Handling KeyError without addressing the root cause; may result in data inconsistencies.
-            logger.error(f"KeyError occurred")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
+        except RateLimitExceededException:
+            logger.error("GitHub API rate limit exceeded globally during stats collection.")
+        except GithubException as e:
+            logger.error(f"GitHub API error occurred: {e.status} - {e.data}")
+        except (KeyError, TypeError) as e:
+            logger.error(f"Mapping or data structure error in statistics aggregation: {e}")
 
 
 class GitHubDatabaseManager(GitHubStatsCollector):
