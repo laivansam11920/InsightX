@@ -45,6 +45,27 @@ echo "[INFO] Upgrading pip and installing requirements..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 5. Launch Application
+
+if [ -f .env ]; then
+    echo "The .env file already exists. Skipping the creation step."
+else
+    echo "Creating a sample .env file..."
+
+    cat << EOF > .env
+PORT=5000
+DEBUG=True
+TEST=True
+
+GITHUB_TOKEN=your_github_token_classic
+NAME_GITHUB=your_github_name
+MONGO_URI=your_mongodb_url
+
+DB_NAME=your_db_name
+DB_COLLECTION=your_db_collection_in_db_name
+
+EOF
+
+    echo "Successfully created the .env file!"
+fi
+
 echo "[SUCCESS] Environment setup complete. Launching InsightX..."
-python run.py
