@@ -30,22 +30,10 @@ class BaseGitHubCollector(ABC):
         self.github_client = get_client()
         self.url = Config.GITHUB_GRAPHQL_URL
 
-class GitHubStatsCollector(BaseGitHubCollector):
+
+class GraphQLStatsCollector(BaseGitHubCollector):
     def __init__(self):
         super().__init__()
-
-    @staticmethod
-    def _get_reviews(repo: Repository, /) -> int:
-        reviews_count: int = 0
-
-        try:
-            pulls = repo.get_pulls(state="all")
-            for pr in pulls:
-                reviews_count += len(list(pr.get_reviews()))
-            return reviews_count
-        except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
-            return  reviews_count
 
     def fetch_time_pushes_graphql(self) -> tuple[dict[str, Any], int]:
         pushes_data: int = 0
@@ -85,6 +73,24 @@ class GitHubStatsCollector(BaseGitHubCollector):
             logger.error(f"An unexpected error occurred: {e}")
             return {}, 0
 
+
+class RestStatsCollector(BaseGitHubCollector):
+    def __init__(self):
+        super().__init__()
+
+    @staticmethod
+    def _get_reviews(repo: Repository, /) -> int:
+        reviews_count: int = 0
+
+        try:
+            pulls = repo.get_pulls(state="all")
+            for pr in pulls:
+                reviews_count += len(list(pr.get_reviews()))
+            return reviews_count
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            return  reviews_count
+
     def gets_info_repo(self, repo) -> tuple:
         """This function handles data retrieval for a specific repository."""
         if repo.size == 0:
@@ -116,6 +122,13 @@ class GitHubStatsCollector(BaseGitHubCollector):
 
         return stars, pulls_count, issues_count, issues_comments, repo_fork, sum_reviews, _add, _delete
 
+
+class GitHubStatsCollector(BaseGitHubCollector):
+    def __init__(self):
+        super().__init__()
+        self.rest_collector = RestStatsCollector()
+        self.graphql_collector = GraphQLStatsCollector()
+
     def get_github_stats(self) -> DataSchema | None:
         try:
             gh = self.github_client
@@ -144,11 +157,11 @@ class GitHubStatsCollector(BaseGitHubCollector):
 
             with ThreadPoolExecutor(max_workers=10) as executor:
 
-                future_pushes: Any = executor.submit(self.fetch_time_pushes_graphql)
+                future_pushes: Any = executor.submit(self.graphql_collector.fetch_time_pushes_graphql)
                 future_repos: dict[Any, Repository] = {
-                    executor.submit(self.gets_info_repo, repo): repo for repo in repos
+                    executor.submit(self.rest_collector.gets_info_repo, repo): repo for repo in repos
                 }
-
+                time_push, push_count = future_pushes.result()
                 for future in as_completed(future_repos):
                     #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
                     stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews, add_changes, delete_changes = future.result()
@@ -171,7 +184,6 @@ class GitHubStatsCollector(BaseGitHubCollector):
                     stats["PR_Code_Changes"]["add"] += add_changes #type: ignore
                     stats["PR_Code_Changes"]["delete"] += delete_changes #type: ignore
 
-                time_push, push_count = future_pushes.result()
                 stats["Time_Pushes"] = time_push
                 stats["pushes"] = push_count
 
@@ -183,6 +195,11 @@ class GitHubStatsCollector(BaseGitHubCollector):
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
+
+class GitHubDatabaseManager(GitHubStatsCollector):
+    def __init__(self):
+        super().__init__()
+
     def update_db(self):
         try:
             collection_db = db[f"{Config.DB_COLLECTION}"]
@@ -192,8 +209,12 @@ class GitHubStatsCollector(BaseGitHubCollector):
             if data is not None:
                 data_dict = data.model_dump()
                 result = collection_db.replace_one({"User": self.username}, data_dict, upsert=True)
-                logger.info(f"success to save id {result.upserted_id}")
+                return f"success to save id {result.upserted_id}"
             else:
-                logger.error("data is None")
+                return "data is None"
         except Exception as e:
-            logger.error(f"An unexpected error occurred: {e}")
+            return f"An unexpected error occurred: {e}"
+
+"""if __name__ == "__main__":
+    a=GitHubDatabaseManager()
+    logger.info(a.update_db())"""
