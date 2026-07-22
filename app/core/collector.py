@@ -6,8 +6,6 @@ Date: July 2026
 License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
-from fastapi_cloud_cli.commands.env import delete
-
 from app.utils.github_client import get_client
 from app.database.connect_db import db
 from config import Config
@@ -82,7 +80,7 @@ def fetch_time_pushes_graphql(
         return {}, 0
 
 #OPTIMIZE: Need to replace this function with a direct request query to improve performance
-def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int, int, int]:
+def gets_info_repo(repo) -> tuple:
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
         return *(0,) * 8,
