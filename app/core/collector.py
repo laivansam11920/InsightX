@@ -119,22 +119,22 @@ def get_github_stats() -> DataSchema | None:
 
         #TODO: Proceed with developing the retrieval of remaining data for the schema.
         stats: dict[str, int | Dict[str, int]] = {
-            "Starred_Repos": int(user.get_starred().totalCount),  #
-            "Stars_Earned": 0,  #
-            "Contributed_to": 0, #
-            "Project_Earned": len(repos),  #
-            "Pull_Requests": 0,  #
+            "Starred_Repos": int(user.get_starred().totalCount),
+            "Stars_Earned": 0,
+            "Contributed_to": 0,
+            "Project_Earned": len(repos),
+            "Pull_Requests": 0,
             "PR_Code_Changes": {
                 "add": 0,
                 "delete": 0
             },
-            "Issues": 0,  #
-            "pushes": 0,  #
-            "Time_Pushes": {},  #
-            "Issues_Comments": 0, #
-            "reviews": 0, #
-            "reviews_comments": 0, #
-            "Code_Reviews": 0, #
+            "Issues": 0,
+            "pushes": 0,
+            "Time_Pushes": {},
+            "Issues_Comments": 0,
+            "reviews": 0,
+            "reviews_comments": 0,
+            "Code_Reviews": 0,
         }
 
         with ThreadPoolExecutor(max_workers=10) as executor:
