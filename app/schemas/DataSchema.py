@@ -1,10 +1,11 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Dict
 from config import Config
-
+import uuid
 
 class DataSchema(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     User: str = Config.NAME_GITHUB
     Starred_Repos: int = Field(..., ge=0)
     Stars_Earned: int = Field(..., ge=0)

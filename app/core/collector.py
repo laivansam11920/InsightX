@@ -6,22 +6,27 @@ Date: July 2026
 License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
-from app.utils.github_client import get_client
-from app.database.connect_db import db
-from config import Config
-from requests import post
-from collections import defaultdict
-from typing import Dict, Any
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import as_completed
-from utils.logger import logger
-from github.Repository import Repository
-from requests.exceptions import RequestException
-from github import GithubException, RateLimitExceededException
-from utils.queries import CONTRIBUTION_CALENDAR_QUERY
-from schemas.DataSchema import DataSchema
+
+# 1. Standard Library
 from abc import ABC
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict
+
+# 2. Third-party Libraries
+from github import GithubException, RateLimitExceededException
+from github.Repository import Repository
 from pymongo.errors import ConnectionFailure, PyMongoError
+from requests import post
+from requests.exceptions import RequestException
+
+# 3. Local Modules
+from config import Config
+from app.database.connect_db import db
+from app.utils.github_client import get_client
+from schemas.DataSchema import DataSchema
+from utils.logger import logger
+from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 
 class BaseGitHubCollector(ABC):
     def __init__(self):
@@ -72,7 +77,6 @@ class GraphQLStatsCollector(BaseGitHubCollector):
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
             return {}, 0
-
 
 
 class RestStatsCollector(BaseGitHubCollector):
@@ -221,8 +225,9 @@ class GitHubDatabaseManager(GitHubStatsCollector):
 
             if data is not None:
                 data_dict = data.model_dump()
-                result = collection_db.replace_one({"User": self.username}, data_dict, upsert=True)
-                logger.info(f"success to save id {result.upserted_id}")
+                doc_id = data_dict.pop("id", 0)
+                collection_db.replace_one({"User": self.username}, data_dict, upsert=True)
+                logger.info(f"success to save id {doc_id}")
             else:
                 logger.error("Data is None")
         except ConnectionFailure:
@@ -232,6 +237,6 @@ class GitHubDatabaseManager(GitHubStatsCollector):
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-"""if __name__ == "__main__":
+if __name__ == "__main__":
     a=GitHubDatabaseManager()
-    a.update_db()"""
+    a.update_db()
