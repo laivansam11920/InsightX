@@ -21,7 +21,7 @@ from schemas.DataSchema import DataSchema
 from abc import ABC
 
 
-#TODO: Improve error handling by using specific exceptions instead of generic ones.
+#TODO: Improve error handling by using specific exceptions instead of generic ones
 
 class BaseGitHubCollector(ABC):
     def __init__(self):
