@@ -9,7 +9,7 @@ class DataSchema(BaseModel):
     Contributed_to: int = Field(..., ge=0)
     Project_Earned: int = Field(..., ge=0)
     Pull_Requests: int = Field(..., ge=0)
-    PR_Code_Changes: int = Field(..., ge=0)
+    PR_Code_Changes: Dict[str, int] = Field(default_factory=dict)
     Issues: int = Field(..., ge=0)
     pushes: int = Field(..., ge=0)
     Time_Pushes: Dict[str, int] = Field(default_factory=dict)

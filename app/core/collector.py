@@ -6,6 +6,7 @@ Date: July 2026
 License: MIT
 Description: Customizable GitHub repository analytics engine with high-precision data visualization.
 """
+from fastapi_cloud_cli.commands.env import delete
 
 from app.utils.github_client import get_client
 from app.database.connect_db import db
@@ -25,16 +26,18 @@ from schemas.DataSchema import DataSchema
 
 
 def get_reviews(repo, /) -> int:
+    _C: int = 0
+
     try:
-        _C: int = 0
 
         pulls = repo.get_pulls(state="all")
         for pr in pulls:
             _C += len(list(pr.get_reviews()))
         return _C
+
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-        return 0
+        return _C
 
 def fetch_time_pushes_graphql(
     token: str, /, username: str
@@ -79,13 +82,27 @@ def fetch_time_pushes_graphql(
         return {}, 0
 
 #OPTIMIZE: Need to replace this function with a direct request query to improve performance
-def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int]:
+def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int, int, int]:
     """This function handles data retrieval for a specific repository."""
     if repo.size == 0:
-        return *(0,) * 6,
+        return *(0,) * 8,
 
     stars: int = repo.stargazers_count
-    pulls: int = repo.get_pulls(state="all").totalCount
+    pulls: Any = repo.get_pulls(state="all")
+    pulls_count: int = pulls.totalCount
+
+    _add: int = 0
+    _delete: int = 0
+
+    for pr in pulls:
+        try:
+            files_changes = pr.get_files()
+            for file in files_changes:
+                _add += file.additions
+                _delete += file.deletions
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+
     repo_fork = 1 if repo.fork else 0
 
     issues: Any = repo.get_issues(state="all")
@@ -94,7 +111,7 @@ def gets_info_repo(repo) -> tuple[int] | tuple[Any, Any, Any, int, int, int]:
 
     sum_reviews: int = get_reviews(repo)
 
-    return stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews
+    return stars, pulls_count, issues_count, issues_comments, repo_fork, sum_reviews, _add, _delete
 
 def get_github_stats() -> DataSchema | None:
     try:
@@ -103,13 +120,16 @@ def get_github_stats() -> DataSchema | None:
         repos = list(user.get_repos())
 
         #TODO: Proceed with developing the retrieval of remaining data for the schema.
-        stats: Dict[str, int | Dict[str, int]] = {
+        stats: dict[str, int | Dict[str, int]] = {
             "Starred_Repos": int(user.get_starred().totalCount),  #
             "Stars_Earned": 0,  #
             "Contributed_to": 0, #
             "Project_Earned": len(repos),  #
             "Pull_Requests": 0,  #
-            "PR_Code_Changes": 0,
+            "PR_Code_Changes": {
+                "add": 0,
+                "delete": 0
+            },
             "Issues": 0,  #
             "pushes": 0,  #
             "Time_Pushes": {},  #
@@ -130,7 +150,7 @@ def get_github_stats() -> DataSchema | None:
 
             for future in as_completed(future_repos):
                 #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
-                stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews = future.result()
+                stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews, add_changes, delete_changes = future.result()
 
                 keys_mapping: list[tuple[str, int]] = [
                     ("Stars_Earned", stars),
@@ -147,6 +167,9 @@ def get_github_stats() -> DataSchema | None:
                     if k in stats:
                         stats[k] += v
 
+                stats["PR_Code_Changes"]["add"] += add_changes #type: ignore
+                stats["PR_Code_Changes"]["delete"] += delete_changes #type: ignore
+
             time_push, push_count = future_pushes.result()
             stats["Time_Pushes"] = time_push
             stats["pushes"] = push_count
@@ -160,5 +183,4 @@ def get_github_stats() -> DataSchema | None:
         logger.error(f"An unexpected error occurred: {e}")
 
 logger.info(get_github_stats())
-
 
