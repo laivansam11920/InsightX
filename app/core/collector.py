@@ -21,7 +21,7 @@ from github import GithubException, RateLimitExceededException
 from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 from schemas.DataSchema import DataSchema
 from abc import ABC
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, PyMongoError
 
 class BaseGitHubCollector(ABC):
     def __init__(self):
@@ -227,6 +227,8 @@ class GitHubDatabaseManager(GitHubStatsCollector):
                 logger.error("Data is None")
         except ConnectionFailure:
             logger.critical("Database connection lost. Verify network settings or server availability")
+        except PyMongoError as e:
+            logger.error(f"An unexpected error occurred: {e}")
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
