@@ -22,9 +22,6 @@ from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 from schemas.DataSchema import DataSchema
 from abc import ABC
 
-
-#TODO: Improve error handling by using specific exceptions instead of generic ones
-
 class BaseGitHubCollector(ABC):
     def __init__(self):
         self.token = Config.TOKEN
@@ -150,7 +147,6 @@ class GitHubStatsCollector(BaseGitHubCollector):
             user = gh.get_user(self.username)
             repos = list(user.get_repos())
 
-            #TODO: Proceed with developing the retrieval of remaining data for the schema.
             stats: dict[str, int | Dict[str, int]] = {
                 "Starred_Repos": int(user.get_starred().totalCount),
                 "Stars_Earned": 0,
@@ -178,7 +174,7 @@ class GitHubStatsCollector(BaseGitHubCollector):
                 }
                 time_push, push_count = future_pushes.result()
                 for future in as_completed(future_repos):
-                    #HACK: The code is prone to crashing because it uses [] instead of .get(), and lacks specific exception handling for potential indexing errors.
+
                     stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews, add_changes, delete_changes = future.result()
 
                     keys_mapping: list[tuple[str, int]] = [
