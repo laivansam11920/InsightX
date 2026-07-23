@@ -1,2 +1,2 @@
 # InsightX
-Customizable GitHub repository analytics engine with high-precision data visualization.
+Customizable GitHub repository analytics engine with high-precision data visualization
