@@ -29,4 +29,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
-Config = Settings()
+Config = Settings() #type: ignore
