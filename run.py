@@ -6,9 +6,9 @@ import os
 app = create_app()
 
 if os.getenv("WERKZEUG_RUN_MAIN") != "true":
-    print("InsightX has running", end='', flush=True)
+    print("InsightX has running", end="", flush=True)
     for i in range(3):
-        print(".", end='', flush=True)
+        print(".", end="", flush=True)
         sleep(0.5)
     print()
 

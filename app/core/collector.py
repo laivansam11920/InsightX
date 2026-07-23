@@ -28,6 +28,7 @@ from schemas.DataSchema import DataSchema
 from utils.logger import logger
 from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 
+
 class BaseGitHubCollector(ABC):
     def __init__(self):
         self.token = Config.TOKEN
@@ -48,7 +49,7 @@ class GraphQLStatsCollector(BaseGitHubCollector):
             url: str = self.url
             headers: dict[str, str] = {"Authorization": f"Bearer {self.token}"}
             json_data: dict[str, str] = {
-                'query': CONTRIBUTION_CALENDAR_QUERY % self.username,
+                "query": CONTRIBUTION_CALENDAR_QUERY % self.username,
             }
 
             response = post(url, json=json_data, headers=headers, timeout=50)
@@ -58,7 +59,9 @@ class GraphQLStatsCollector(BaseGitHubCollector):
                 print("Error from GitHub:", data, flush=True)
                 return {}, 0
 
-            weeks: list = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
+            weeks: list = data["data"]["user"]["contributionsCollection"][
+                "contributionCalendar"
+            ]["weeks"]
             for week in weeks:
                 for day in week["contributionDays"]:
                     # The date format is 'YYYY-MM-DD', so we take the first 7 characters to get 'YYYY-MM'
@@ -100,12 +103,12 @@ class RestStatsCollector(BaseGitHubCollector):
             return reviews_count
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-            return  reviews_count
+            return reviews_count
 
     def gets_info_repo(self, repo) -> tuple:
         """This function handles data retrieval for a specific repository."""
         if repo.size == 0:
-            return *(0,) * 8,
+            return (*(0,) * 8,)
 
         stars: int = repo.stargazers_count
         pulls: Any = repo.get_pulls(state="all")
@@ -137,7 +140,16 @@ class RestStatsCollector(BaseGitHubCollector):
 
         sum_reviews: int = self._get_reviews(repo)
 
-        return stars, pulls_count, issues_count, issues_comments, repo_fork, sum_reviews, _add, _delete
+        return (
+            stars,
+            pulls_count,
+            issues_count,
+            issues_comments,
+            repo_fork,
+            sum_reviews,
+            _add,
+            _delete,
+        )
 
 
 class GitHubStatsCollector(BaseGitHubCollector):
@@ -158,10 +170,7 @@ class GitHubStatsCollector(BaseGitHubCollector):
                 "Contributed_to": 0,
                 "Project_Earned": len(repos),
                 "Pull_Requests": 0,
-                "PR_Code_Changes": {
-                    "add": 0,
-                    "delete": 0
-                },
+                "PR_Code_Changes": {"add": 0, "delete": 0},
                 "Issues": 0,
                 "pushes": 0,
                 "Time_Pushes": {},
@@ -173,14 +182,26 @@ class GitHubStatsCollector(BaseGitHubCollector):
 
             with ThreadPoolExecutor(max_workers=10) as executor:
 
-                future_pushes: Any = executor.submit(self.graphql_collector.fetch_time_pushes_graphql)
+                future_pushes: Any = executor.submit(
+                    self.graphql_collector.fetch_time_pushes_graphql
+                )
                 future_repos: dict[Any, Repository] = {
-                    executor.submit(self.rest_collector.gets_info_repo, repo): repo for repo in repos
+                    executor.submit(self.rest_collector.gets_info_repo, repo): repo
+                    for repo in repos
                 }
                 time_push, push_count = future_pushes.result()
                 for future in as_completed(future_repos):
 
-                    stars, pulls, issues_count, issues_comments, repo_fork, sum_reviews, add_changes, delete_changes = future.result()
+                    (
+                        stars,
+                        pulls,
+                        issues_count,
+                        issues_comments,
+                        repo_fork,
+                        sum_reviews,
+                        add_changes,
+                        delete_changes,
+                    ) = future.result()
 
                     keys_mapping: list[tuple[str, int]] = [
                         ("Stars_Earned", stars),
@@ -190,15 +211,15 @@ class GitHubStatsCollector(BaseGitHubCollector):
                         ("Contributed_to", repo_fork),
                         ("reviews", sum_reviews),
                         ("reviews_comments", sum_reviews),
-                        ("Code_Reviews", sum_reviews)
+                        ("Code_Reviews", sum_reviews),
                     ]
 
                     for k, v in keys_mapping:
                         if k in stats:
                             stats[k] += v
 
-                    stats["PR_Code_Changes"]["add"] += add_changes #type: ignore
-                    stats["PR_Code_Changes"]["delete"] += delete_changes #type: ignore
+                    stats["PR_Code_Changes"]["add"] += add_changes  # type: ignore
+                    stats["PR_Code_Changes"]["delete"] += delete_changes  # type: ignore
 
                 stats["Time_Pushes"] = time_push
                 stats["pushes"] = push_count
@@ -206,18 +227,22 @@ class GitHubStatsCollector(BaseGitHubCollector):
             return DataSchema(**stats)
 
         except RateLimitExceededException:
-            logger.error("GitHub API rate limit exceeded globally during stats collection.")
+            logger.error(
+                "GitHub API rate limit exceeded globally during stats collection."
+            )
         except GithubException as e:
             logger.error(f"GitHub API error occurred: {e.status} - {e.data}")
         except (KeyError, TypeError) as e:
-            logger.error(f"Mapping or data structure error in statistics aggregation: {e}")
+            logger.error(
+                f"Mapping or data structure error in statistics aggregation: {e}"
+            )
 
 
 class GitHubDatabaseManager(GitHubStatsCollector):
     def __init__(self):
         super().__init__()
 
-    def update_db(self) -> str | None:
+    def update_db(self) -> Any:
         try:
             collection_db = db[Config.DB_COLLECTION]
 
@@ -226,17 +251,20 @@ class GitHubDatabaseManager(GitHubStatsCollector):
             if data is not None:
                 data_dict = data.model_dump()
                 doc_id = data_dict.pop("id", 0)
-                collection_db.replace_one({"User": self.username}, data_dict, upsert=True)
+                collection_db.replace_one(
+                    {"User": self.username}, data_dict, upsert=True
+                )
                 logger.info(f"success to save id {doc_id}")
             else:
                 logger.error("Data is None")
         except ConnectionFailure:
-            logger.critical("Database connection lost. Verify network settings or server availability")
+            logger.critical(
+                "Database connection lost. Verify network settings or server availability"
+            )
         except PyMongoError as e:
             logger.error(f"An unexpected error occurred: {e}")
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
 
-if __name__ == "__main__":
-    a=GitHubDatabaseManager()
-    a.update_db()
+
+__all__ = ["GitHubDatabaseManager"]

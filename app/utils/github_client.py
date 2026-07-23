@@ -11,6 +11,7 @@ from config import Config
 from github import Auth, Github, GithubException, RateLimitExceededException
 from utils.logger import logger
 
+
 def get_github_client() -> Github | None:
     try:
         tk: str = Config.TOKEN
@@ -25,7 +26,9 @@ def get_github_client() -> Github | None:
     except Exception as e:
         logger.error(f"An error occurred: {e}.", flush=True)
 
+
 _client: Github | None = None
+
 
 def get_client():
     global _client

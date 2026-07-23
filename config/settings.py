@@ -10,6 +10,7 @@ Description: Customizable GitHub repository analytics engine with high-precision
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
+
 class Settings(BaseSettings):
     # Database setting
     DB_NAME: str = Field(default="InsightX", alias="DB_NAME")
@@ -26,5 +27,6 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=False, alias="DEBUG")
     TEST: bool = Field(default=False, alias="TEST")
     model_config = SettingsConfigDict(populate_by_name=True)
+
 
 Config = Settings()

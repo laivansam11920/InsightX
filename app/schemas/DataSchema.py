@@ -4,6 +4,7 @@ from typing import Dict
 from config import Config
 import uuid
 
+
 class DataSchema(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     User: str = Config.NAME_GITHUB
