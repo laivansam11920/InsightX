@@ -108,7 +108,7 @@ class RestStatsCollector(BaseGitHubCollector):
     def gets_info_repo(self, repo) -> tuple:
         """This function handles data retrieval for a specific repository."""
         if repo.size == 0:
-            return (*(0,) * 8,)
+            return tuple([0] * 8)
 
         stars: int = repo.stargazers_count
         pulls: Any = repo.get_pulls(state="all")
