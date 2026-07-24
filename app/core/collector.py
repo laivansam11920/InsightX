@@ -106,7 +106,7 @@ class RestStatsCollector(BaseGitHubCollector):
             return reviews_count
 
     def gets_info_repo(self, repo) -> tuple:
-        """This function handles data retrieval for a specific repository"""
+        """This function handles data retrieval for a specific repository."""
         if repo.size == 0:
             return tuple([0] * 8)
 
