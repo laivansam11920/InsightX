@@ -20,7 +20,7 @@ from utils.queries import CONTRIBUTION_CALENDAR_QUERY
 from schemas.DataSchema import DataSchema
 
 
-#TODO: Improve error handling by using specific exceptions instead of generic ones.
+#TODO: Improve error handling by using specific exceptions instead of generic ones
 
 
 def get_reviews(repo, /) -> int:
